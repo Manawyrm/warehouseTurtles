@@ -3,13 +3,12 @@
 -- dev
 -- tuogex
 -- --
+local term = peripheral.wrap("right")
 
 -- --
 -- UIManager @static
 -- Holds the windows of the program and handles events
 -- --
-local term = peripheral.wrap("right")
-
 UIManager = {}
 UIManager.prototype = {
 	--vars
@@ -91,7 +90,7 @@ UIManager.prototype = {
 				end
 			end
 			for key, val in pairs(closed) do
-				table.remove(self.windows, val)
+				self.windows[val] = nil
 			end
 		end
 	end;
@@ -245,18 +244,14 @@ Window.prototype = {
 	addComponent = function(self, componentTbl)
 		componentTbl.parent = self
 		componentTbl.removed = false
-		--table.insert(self.components, componentTbl)
-		self.components[tostring(componentTbl)] = componentTbl
+		table.insert(self.components, componentTbl)
 	end;
 	removeComponent = function(self, componentTbl)
-		if (self.components[tostring(componentTbl)] ~= nil) then
-			self.components[tostring(componentTbl)].removed = true
+		for key, val in pairs(self.components) do
+			if (val == componentTbl) then
+				val.removed = true
+			end
 		end
-		-- for key, val in pairs(self.components) do
-		-- 	if (val == componentTbl) then
-		-- 		val.removed = true
-		-- 	end
-		-- end
 	end;
 	close = function(self)
 		UIManager:closeWindow(self)
@@ -298,7 +293,6 @@ Window.prototype = {
 	update = function(self)
 		local removed = {}
 		for key, val in pairs(self.components) do
-
 			if (val.removed) then
 				table.insert(removed, key)
 			else
@@ -377,18 +371,14 @@ Panel.prototype = {
 	addComponent = function(self, componentTbl)
 		componentTbl.parent = self
 		componentTbl.removed = false
-		--table.insert(self.components, componentTbl)
-		self.components[tostring(componentTbl)] = componentTbl
+		table.insert(self.components, componentTbl)
 	end;
 	removeComponent = function(self, componentTbl)
-		if (self.components[tostring(componentTbl)] ~= nil) then
-			self.components[tostring(componentTbl)].removed = true
+		for key, val in pairs(self.components) do
+			if (val == componentTbl) then
+				val.removed = true
+			end
 		end
-		-- for key, val in pairs(self.components) do
-		-- 	if (val == componentTbl) then
-		-- 		val.removed = true
-		-- 	end
-		-- end
 	end;
 	close = function(self)
 		UIManager:closeWindow(self)
@@ -433,7 +423,7 @@ Panel.prototype = {
 			end
 		end
 		for key, val in pairs(removed) do
-			table.remove(self.components, val)
+			self.components[val] = nil
 		end
 	end;
 }
@@ -773,8 +763,7 @@ List.prototype = {
 		componentTbl.activeTextColor = self.activeTextColor
 		componentTbl.parent = self
 		componentTbl.removed = false
-		--table.insert(self.components, componentTbl)
-		self.components[tostring(componentTbl)] = componentTbl
+		table.insert(self.components, componentTbl)
 	end;
 	update = function(self) return false end;
 }
