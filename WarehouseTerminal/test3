@@ -1,0 +1,205 @@
+os.loadAPI("txUI")
+os.loadAPI("warehouse")
+os.loadAPI("itemNames")
+os.loadAPI("glassDebug")
+
+glassDebug.open("back", "Fluttershy", 123, "Warehouse")
+
+terminate = false
+rednet.open("back")
+--term.redirect(peripheral.wrap("right"))
+local w, h = peripheral.wrap("right").getSize()
+mainWindow = {}
+itemList   = nil
+Inventory = {}
+function lookupDisplayName(item)
+    for k,v in pairs(itemNames.displayNames) do
+        if (v[1] == item.name) then
+            if (v[2] ~= nil) then -- Damage-Value nil wird ignoriert, alle Damage-Values sind OK.
+                if (v[2] == item.damage) then
+                    return v[3]
+                end
+            else
+                return v[3]
+            end
+        end
+    end
+    return item.name
+end
+
+function drawMainWindow()
+    window = txUI.Window:new({w = w; h = h;})
+    mainWindow = window
+    txUI.UIManager:addWindow(window)
+    txUI.UIManager:setVisibleWindow(window)
+    window:setTitleLabel(txUI.Label:new({text = "TurtleWarehouse - Storage made easy"; bgColor = window.tlColor; textColor = colors.white; w = window.w; x = window.x; textAlign = "right";}))
+    --window:addComponent(txUI.Button:new({x = 1; y = 1; w = 1; h = 1; action = (function(self) terminate = true; self.parent:close(); error("test") end); textColor = colors.red; bgColor = window.tlColor; text = "X";}))
+
+    -- window:addComponent(txUI.Label:new({x = 1; y = 5; w = w; text = "Login to txUI"; bgColor = colors.lightGray;}))
+    --window:addComponent(txUI.Label:new({x = 4; y = 8; text = "Username"; textAlign = "left"; bgColor = colors.lightGray;}))
+    --window:addComponent(txUI.Label:new({x = 4; y = 10; text = "Password"; textAlign = "left"; bgColor = colors.lightGray;}))
+    --window:addComponent(txUI.TextField:new({x = 33; y = 10; placeholder = "Password"; textMask = "*";}))
+    --window:addComponent(txUI.Checkbox:new({x = 4; y = 12; text = "Remember me";}))
+end
+
+selectedList = {}
+selectedItem = nil
+textField = nil
+function selectedItemHandler(item)
+    for k,v in pairs(selectedList) do
+        mainWindow:removeComponent(v)
+    end
+
+
+    selectedItem = item
+    selectedList = {}
+
+    -- DisplayName
+    label = { x = 29;
+                        y = 3;
+                        text = lookupDisplayName(item);
+                        bgColor = colors.lightGray; }
+    label.w = 30
+    table.insert(selectedList, txUI.Label:new(label));
+
+    -- Internal Name
+    label = {     x = 29;
+                        y = 5;
+                        text = item.name;
+                        bgColor = colors.lightGray; }
+    label.w = 30
+    table.insert(selectedList, txUI.Label:new(label));
+
+    -- Lagermenge
+    label = {     x = 35;
+                        y = 7;
+                        text = "Lagerbestand:";
+                        bgColor = colors.lightGray; }
+    label.w = 13
+    table.insert(selectedList, txUI.Label:new(label));
+    label = {           x = 48;
+                        y = 7;
+                        text = tostring(item.qty);
+                        bgColor = colors.lightGray; }
+    label.w = 5
+    table.insert(selectedList, txUI.Label:new(label));
+
+
+    label = {     x = 35;
+                        y = 9;
+                        text = "Menge :";
+                        bgColor = colors.lightGray; }
+    label.w = 13
+    table.insert(selectedList, txUI.Label:new(label));
+
+    textField = txUI.TextField:new(
+            {
+             x = 48;
+             y = 9;
+             w = 4;
+             placeholder = "64";
+            }
+    )
+    textField.text = 64
+    table.insert(selectedList, textField);
+
+    table.insert(selectedList,txUI.Button:new(
+            {x = 31;
+             y = 11;
+             w = 6;
+             h = 1;
+             text = "-10";
+             action = (function(self) changeTextValue(item, -10, textField) end);
+    }));
+    table.insert(selectedList,txUI.Button:new(
+            {x = 38;
+             y = 11;
+             w = 6;
+             h = 1;
+             text = "-1";
+             action = (function(self) changeTextValue(item, -1, textField) end);
+    }));
+    table.insert(selectedList,txUI.Button:new(
+            {x = 45;
+             y = 11;
+             w = 6;
+             h = 1;
+             text = "+1";
+             action = (function(self) changeTextValue(item, 1, textField) end);
+    }));
+    table.insert(selectedList,txUI.Button:new(
+            {x = 52;
+             y = 11;
+             w = 6;
+             h = 1;
+             text = "+10";
+             action = (function(self) changeTextValue(item, 10, textField) end);
+    }));
+
+    table.insert(selectedList,txUI.Button:new(
+            {x = 36;
+             y = 20;
+             text = "Bestellen";
+             action = (function(self) warehouse.addWork(selectedItem.name, selectedItem.damage, tonumber(textField.text)) end);
+    }));
+
+    for k,v in pairs(selectedList) do
+        mainWindow:addComponent(v)
+    end
+
+    glassDebug.writeText("Selected: "..item.name)
+end
+
+function changeTextValue (item, value, textField)
+    if (item.qty >= (tonumber(textField.text) + value)) then
+        if ((tonumber(textField.text) + value) > 0) then
+            textField.text = tostring(tonumber(textField.text) + value)
+        end
+    end
+end
+
+fixed = false
+function refreshItemList()
+    if (fixed == true) then
+        return
+    end
+
+    if (itemList ~= nil) then
+        mainWindow:removeComponent(itemList)
+    end
+
+    list = txUI.List:new({x = 2; y = 3; w = 24; h = 20})
+    itemList = list
+    mainWindow:addComponent(list)
+    for k,v in pairs(Inventory) do
+        if (v.name ~= "unknown") then
+            list:addComponent(txUI.Button:new({text = lookupDisplayName(v); action = (function(self) selectedItemHandler(v) end);}))
+        end
+    end
+
+end
+
+drawMainWindow()
+
+function renderList()
+    os.pullEvent("refreshItemList")
+    refreshItemList()
+end
+
+function receiveInventoryLists()
+    while not terminate do
+        senderId, message, protocol = rednet.receive("inventoryList")
+        newInventory = textutils.unserialize(message)
+        if (#newInventory ~= #Inventory) then
+            os.queueEvent("refreshItemList")
+            glassDebug.writeText ("refreshed Item List.")
+        end
+        Inventory = newInventory
+    end
+end
+
+
+parallel.waitForAll(function() txUI.UIManager:startUpdateCycle()  end,
+                    function() while not terminate do renderList() end end
+                    ,receiveInventoryLists
+                    )

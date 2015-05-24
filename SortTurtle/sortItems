@@ -1,0 +1,170 @@
+Configuration = {}
+Configuration.Chests = {
+	{"minecraft:dirt"							,nil, -297,56,670}, -- Muelltonne
+	{"minecraft:cobblestone"					,nil, -297,56,671}, -- Muelltonne
+	{"minecraft:grass"							,nil, -297,56,671}, -- Muelltonne
+
+    {"minecraft:diamond"						,nil, -297,56,672},
+	{"minecraft:coal"							,nil, -297,56,673},
+	{"minecraft:iron_ore"						,nil, -297,56,674},
+	{"IC2:blockOreCopper"						,nil, -297,56,675},
+	{"IC2:blockOreLead"							,nil, -297,56,676},
+	{"minecraft:flint"							,nil, -297,56,677},
+	{"minecraft:gravel"							,nil, -297,56,678},
+	{"IC2:blockOreUran"							,nil, -297,56,679},
+	{"IC2:blockOreTin"							,nil, -297,56,680},
+	{"minecraft:redstone"						,nil, -297,56,681},
+	{"minecraft:gold_ore"						,nil, -297,56,682},
+	{"minecraft:dye" 							,nil, -297,56,683},
+	{"minecraft:obsidian"						,nil, -297,56,684},
+
+	{"ProjRed|Core:projectred.core.part"		,37, -297,56,685}, -- Ruby
+	{"ProjRed|Core:projectred.core.part"		,38, -297,56,685}, -- Sapphire
+	{"ProjRed|Core:projectred.core.part"		,39, -297,56,685}, -- Peridot
+
+	{"Railcraft:cube"							,7, -297,56,686}, -- Quarried Stone
+
+	{"minecraft:bread"							,nil, -297,57,670},
+	{"minecraft:bread"							,nil, -297,57,671},
+
+	{"minecraft:pumpkin"						,nil, -297,57,672},
+	{"minecraft:stick"							,nil, -297,57,673},
+	{"minecraft:bone"							,nil, -297,57,674},
+	{"minecraft:sign"							,nil, -297,57,675},
+	{"minecraft:egg"							,nil, -297,57,676},
+	{"minecraft:emerald"						,nil, -297,57,677},
+	{"minecraft:slimeball"						,nil, -297,57,678},
+	{"minecraft:netherrack"						,nil, -297,57,679},
+	{"minecraft:leather"						,nil, -297,57,680},
+	{"minecraft:rotten_flesh"					,nil, -297,57,681},
+	{"minecraft:steak"							,nil, -297,57,682},
+	{"minecraft:soul_sand"						,nil, -297,57,683},
+	{"minecraft:feather"						,nil, -297,57,684},
+	{"minecraft:apple"							,nil, -297,57,685},
+
+	{"minecraft:melon_block"					,nil, -297,58,670},
+	{"minecraft:melon_block"					,nil, -297,58,671},
+	{"minecraft:melon_block"					,nil, -297,58,672},
+
+	{"unknown" 									,nil, -297,56,688}
+}
+
+Configuration.InputChest = {
+	-300,56,688,turtle.suckDown
+}
+
+os.loadAPI("glassDebug")
+glassDebug.open("left", "Fluttershy", 123, "SortTurtle")
+-- glassDebug.hookGlobal()
+
+os.loadAPI("gpsMove")
+
+gpsMove.setAbsoluteDirection("east")
+
+function moveToInput()
+	gpsMove.setcDir("east")
+	gpsMove.goTo(Configuration.InputChest[1], Configuration.InputChest[2], Configuration.InputChest[3], "east")
+end
+
+function emptySlotPresent()
+	for i=1,16 do
+		if (turtle.getItemCount(i) == 0) then
+			return true
+		end
+	end
+	return false
+end
+
+function inventoryEmpty()
+	for i=1,16 do
+		if (turtle.getItemCount(i) ~= 0) then
+			return false
+		end
+	end
+	return true
+end
+function selectFirstItemSlot()
+	for i=1,16 do
+		if (turtle.getItemCount(i) ~= 0) then
+			turtle.select(i)
+		end
+	end
+end
+function searchChest(data, count)
+	local chestCounter = 0
+	glassDebug.writeText(tostring(data.name))
+	-- Chest-Table durchlaufen und danach suchen
+	for k,v in pairs(Configuration.Chests) do
+		if (v[1] == data.name) then
+			--glassDebug.writeText(tostring(data.name))
+			--print ("count: "..tostring(count))
+			--print ("chestCounter: "..tostring(chestCounter))
+				if (v[2] ~= nil) then -- Damage-Value nil wird ignoriert, alle Damage-Values sind OK.
+					if (v[2] == data.damage) then
+						if (chestCounter == count) then
+							return v
+						end
+						chestCounter = chestCounter + 1
+					end
+				else
+					if (chestCounter == count) then
+						return v
+					end
+					chestCounter = chestCounter + 1
+				end
+		end
+	end
+
+	-- Keine Kiste gefunden. Springe Default-Chest an.
+	for k,v in pairs(Configuration.Chests) do
+		if (v[1] == "unknown") then
+			return v
+		end
+	end
+end
+function sortItems()
+	while true do
+		-- Zur Eingangschest bewegen
+		moveToInput()
+
+		-- Warten, bis ein Stapel eingezogen ist
+		while (emptySlotPresent()) do
+			Configuration.InputChest[4]()
+		end
+
+		currentItem = nil
+		currentChestCount = 0
+		while (not inventoryEmpty()) do
+			selectFirstItemSlot()
+			local data = turtle.getItemDetail()
+			if data then
+				if (not itemCompare(data, currentItem)) then
+					currentItem = data
+					currentChestCount = 0
+				end
+
+				local sortChest = searchChest(data, currentChestCount)
+
+				gpsMove.setcDir("east")
+				gpsMove.goTo(sortChest[3], sortChest[4], sortChest[5], "east")
+				if (not turtle.drop()) then
+					currentChestCount = currentChestCount + 1
+				end
+
+			end
+		end
+	end
+end
+function itemCompare(item1, item2)
+	if (item1 == nil) or (item2 == nil) then
+		return false
+	end
+	return ((item1.name == item2.name) and (item1.damage == item2.damage))
+end
+function serveData()
+	while true do
+		local senderId, message, protocol = rednet.receive("chestList")
+		rednet.send(senderId, textutils.serialize(Configuration.Chests) ,"chestList")
+	end
+end
+parallel.waitForAll(sortItems, serveData)

@@ -1,0 +1,15 @@
+Configuration = {}
+Configuration.WarehouseFetchTurtle = 83
+Configuration.ModemSide = "back"
+
+function addWork(name, damage, qty)
+    local newWork = {}
+    newWork.name = name
+    newWork.damage = damage
+    newWork.qty    = qty
+
+    if (not rednet.isOpen()) then
+        rednet.open(Configuration.ModemSide)
+    end
+    rednet.send(Configuration.WarehouseFetchTurtle, textutils.serialize(newWork), "fetchItems")
+end

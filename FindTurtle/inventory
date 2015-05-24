@@ -1,0 +1,86 @@
+{
+  {
+    qty = 0,
+    name = "minecraft:dirt",
+  },
+  {
+    qty = 0,
+    name = "minecraft:cobblestone",
+  },
+  {
+    qty = 504,
+    name = "minecraft:diamond",
+  },
+  {
+    qty = 2758,
+    name = "minecraft:coal",
+  },
+  {
+    qty = 1472,
+    name = "minecraft:iron_ore",
+  },
+  {
+    qty = 1740,
+    name = "IC2:blockOreCopper",
+  },
+  {
+    qty = 233,
+    name = "IC2:blockOreLead",
+  },
+  {
+    qty = 289,
+    name = "minecraft:flint",
+  },
+  {
+    qty = 2842,
+    name = "minecraft:gravel",
+  },
+  {
+    qty = 103,
+    name = "IC2:blockOreUran",
+  },
+  {
+    qty = 1291,
+    name = "IC2:blockOreTin",
+  },
+  {
+    qty = 2026,
+    name = "minecraft:redstone",
+  },
+  {
+    qty = 175,
+    name = "minecraft:gold_ore",
+  },
+  {
+    qty = 352,
+    name = "minecraft:dye",
+  },
+  {
+    qty = 273,
+    name = "minecraft:obsidian",
+  },
+  {
+    qty = 79,
+    name = "ProjRed|Core:projectred.core.part",
+    damage = 37,
+  },
+  {
+    qty = 159,
+    name = "ProjRed|Core:projectred.core.part",
+    damage = 38,
+  },
+  {
+    qty = 196,
+    name = "ProjRed|Core:projectred.core.part",
+    damage = 39,
+  },
+  {
+    qty = 1681,
+    name = "Railcraft:cube",
+    damage = 7,
+  },
+  {
+    qty = 0,
+    name = "unknown",
+  },
+}

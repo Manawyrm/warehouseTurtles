@@ -1,0 +1,201 @@
+local tArgs = {...}
+cDir = "east"
+local cX,cY,cZ = gps.locate(5)
+cX = math.floor(cX)
+cY = math.floor(cY)
+cZ = math.floor(cZ)
+
+function setcDir(newDir)
+    cDir = newDir
+end
+function setAbsoluteDirection(dir)
+        turtle.up()
+        turtle.up()
+        turtle.up()
+        local vec1 = vector.new(gps.locate(2, false))
+        turtle.forward()
+        local vec2 = vector.new(gps.locate(2, false))
+        turtle.back()
+        turtle.down()
+        turtle.down()
+        turtle.down()
+
+        local heading
+        if vec1 and vec2 then
+            local resultVec = vec2 - vec1
+            heading = ((resultVec.x + math.abs(resultVec.x) * 2) + (resultVec.z + math.abs(resultVec.z) * 3)) % 4
+            local rotation = convertDirection(dir) - heading
+            for i=1,math.abs(rotation) do
+                if (rotation <= 0) then
+                   turtle.turnLeft()
+                else
+                    turtle.turnRight()
+                end
+            end
+
+        end
+end
+
+
+function turnRight()
+  if cDir == "north" then
+    cDir = "east"
+  elseif cDir == "east" then
+    cDir = "south"
+  elseif cDir == "south" then
+    cDir = "west"
+  elseif cDir == "west" then
+    cDir = "north"
+  else
+    print("Error!")
+	error()
+  end
+  turtle.turnRight()
+end
+
+function convertDirection(cDir)
+    if cDir == "north" then
+        return 2
+    elseif cDir == "east" then
+        return 3
+    elseif cDir == "south" then
+        return 0
+    elseif cDir == "west" then
+        return 1
+    end
+end
+
+function turnLeft()
+	if cDir == "north" then
+		cDir = "west"
+	elseif cDir == "east" then
+		cDir = "north"
+	elseif cDir == "south" then
+		cDir = "east"
+	elseif cDir == "west" then
+		cDir = "south"
+	else
+		print("Error!")
+		error()
+	end
+	turtle.turnLeft()
+end
+
+function turnTo(dir)
+    --if cDir ~= dir then
+    --    repeat
+    --        turnRight()
+    --    until cDir == dir
+    --end
+
+    --print ("Gewünschte Richtung: " ..  dir .. ": "..convertDirection(dir))
+    --print ("Aktuelle Richtung:   " .. cDir .. ": "..convertDirection(cDir))
+
+    --read()
+    sleep(0)
+    local rotation = convertDirection(dir) - convertDirection(cDir)
+
+    if (math.abs(rotation) == 3) then
+        if (rotation < 0) then
+           turnRight()
+        else
+           turnLeft()
+        end
+    else
+        for i=1,math.abs(rotation) do
+            if (rotation < 1) then
+               turnLeft()
+            else
+               turnRight()
+            end
+        end
+    end
+end
+
+function moveForward()
+  if cDir == "north" then
+    cZ = cZ-1
+  elseif cDir == "east" then
+    cX = cX+1
+  elseif cDir == "south" then
+    cZ = cZ+1
+  elseif cDir == "west" then
+    cX = cX-1
+  else
+    print("Error!")
+	error()
+  end
+  while not turtle.forward() do
+  end
+end
+
+function moveUp()
+  cY = cY+1
+  while not turtle.up() do
+  end
+end
+
+function moveDown()
+  cY = cY-1
+  while not turtle.down() do
+  end
+end
+
+function moveToX(x)
+  if cX < x then
+    turnTo("east")
+    repeat
+      moveForward()
+    until cX == x
+  elseif cX > x then
+    turnTo("west")
+    repeat
+      moveForward()
+    until cX == x
+  else
+    --print("already there")
+  end
+end
+
+function moveToZ(z)
+  if cZ < z then
+    turnTo("south")
+    repeat
+      moveForward()
+    until cZ == z
+  elseif cZ > z then
+    turnTo("north")
+    repeat
+      moveForward()
+    until cZ == z
+  else
+  end
+end
+
+function moveToY(y)
+  if cY < y then
+    repeat
+      moveUp()
+    until cY == y
+  elseif cY > y then
+    repeat
+      moveDown()
+    until cY == y
+  else
+   --print("already there")
+  end
+end
+
+function goTo(x, y, z, heading)
+    local cX,cY,cZ = gps.locate(5)
+    cX = math.floor(cX)
+    cY = math.floor(cY)
+    cZ = math.floor(cZ)
+
+    moveToX(x)
+    moveToY(y)
+    moveToZ(z)
+    turnTo(heading)
+end
+
+--goTo(tonumber(tArgs[1]), tonumber(tArgs[2]), tonumber(tArgs[3]))

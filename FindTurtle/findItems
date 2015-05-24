@@ -1,0 +1,402 @@
+Configuration = {}
+Configuration.SortTurtle = 44
+Configuration.WarehouseComputer = 99
+Configuration.Chests = {}
+Configuration.SingledChests = {}
+
+Configuration.OutputChest = {
+	-293,56,688,turtle.dropDown
+}
+
+Configuration.xOffset     = 2
+
+Inventory = {}
+local WorkQueue = {}
+
+os.loadAPI("glassDebug")
+glassDebug.open("left", "Fluttershy", 123, "FindTurtle")
+
+os.loadAPI("gpsMove")
+
+gpsMove.setcDir("west")
+gpsMove.setAbsoluteDirection("west")
+
+function moveToOutput()
+	gpsMove.setcDir("west")
+	gpsMove.goTo(Configuration.OutputChest[1], Configuration.OutputChest[2], Configuration.OutputChest[3], "west")
+end
+
+function emptySlotPresent()
+	for i=1,16 do
+		if (turtle.getItemCount(i) == 0) then
+			return true
+		end
+	end
+	return false
+end
+
+function inventoryEmpty()
+	for i=1,16 do
+		if (turtle.getItemCount(i) ~= 0) then
+			return false
+		end
+	end
+	return true
+end
+function selectFirstItemSlot()
+	for i=1,16 do
+		if (turtle.getItemCount(i) ~= 0) then
+			turtle.select(i)
+		end
+	end
+end
+function itemCompare(item1, item2)
+	if (item1 == nil) or (item2 == nil) then
+		return false
+	end
+	return ((item1.name == item2.name) and (item1.damage == item2.damage))
+end
+function itemCompareNumeric(item1, item2)
+	if (item1 == nil) or (item2 == nil) then
+		return false
+	end
+	return ((item1[1] == item2[1]) and (item1[2] == item2[2]))
+end
+
+function getAllChests(name, damage)
+	newChests = {}
+
+	for k,v in pairs(Configuration.Chests) do
+		if (v[1] == name) then
+				if (v[2] ~= nil) then -- Damage-Value nil wird ignoriert, alle Damage-Values sind OK.
+					if (v[2] == damage) then
+						table.insert(newChests, v)
+					end
+				else
+					table.insert(newChests, v)
+				end
+		end
+	end
+
+	if (#newChests == 0) then
+		-- Keine Kiste gefunden. Springe Default-Chest an.
+		for k,v in pairs(Configuration.Chests) do
+			if (v[1] == "unknown") then
+				table.insert(newChests, v)
+			end
+		end
+	end
+
+
+	--for k,v in pairs(newChests) do
+	--	glassDebug.writeText(tostring(v[1]).." - "..tostring(v[2]), 0x00FF00)
+	--end
+
+	return newChests
+end
+
+function tableContains(array, v)
+	for k2,v2 in pairs(array) do
+		if (itemCompareNumeric(v, v2)) then
+			return true
+		end
+	end
+	return false
+end
+function getSingledChestList()
+	newChests = {}
+
+	for k,v in pairs(Configuration.Chests) do
+		if (not tableContains(newChests, v)) then
+			table.insert(newChests, v)
+		end
+	end
+
+	--for k,v in pairs(newChests) do
+	--	glassDebug.writeText("SingledChests: "..tostring(v[1]).." - "..tostring(v[2]), 0xFFFF00)
+	--end
+
+
+	return newChests
+end
+
+function searchChest(data, count)
+	local chestCounter = 0
+	-- Chest-Table durchlaufen und danach suchen
+	for k,v in pairs(Configuration.Chests) do
+		if (v[1] == data.name) then
+			print ("count: "..tostring(count))
+			print ("chestCounter: "..tostring(chestCounter))
+				if (v[2] ~= nil) then -- Damage-Value nil wird ignoriert, alle Damage-Values sind OK.
+					if (v[2] == data.damage) then
+						if (chestCounter == count) then
+							return v
+						end
+						chestCounter = chestCounter + 1
+					end
+				else
+					if (chestCounter == count) then
+						return v
+					end
+					chestCounter = chestCounter + 1
+				end
+		end
+	end
+
+	-- Keine Kiste gefunden. Springe Default-Chest an.
+	for k,v in pairs(Configuration.Chests) do
+		if (v[1] == "unknown") then
+			return v
+		end
+	end
+end
+
+function updateChestList()
+	rednet.send(Configuration.SortTurtle, "fetch","chestList")
+	local senderId, message, protocol = rednet.receive("chestList")
+	if (senderId == Configuration.SortTurtle) then
+		glassDebug.writeText("ChestList updated!")
+		Configuration.Chests = textutils.unserialize(message)
+		Configuration.SingledChests = getSingledChestList()
+	end
+end
+
+function moveToChest(name, damage, count)
+	if (count == nil) then
+		counter = 0
+	end
+	local data = {}
+	data.name = name
+	data.damage = damage
+	local chest = searchChest(data, count)
+
+	gpsMove.setcDir("west")
+	gpsMove.goTo(chest[3] + Configuration.xOffset, chest[4], chest[5], "west")
+end
+
+function searchInventory(name, damage)
+	for k,v in pairs(Inventory) do
+		if (v.name == name) then
+			if (v.damage ~= nil) then -- Damage-Value nil wird ignoriert, alle Damage-Values sind OK.
+				if (v.damage == damage) then
+					return v
+				end
+			else
+				return v
+			end
+		end
+	end
+	return nil
+end
+function setQty(name, damage, qty, displayName)
+	item = searchInventory(name,damage)
+
+	if (item == nil) then
+		item = {}
+		item.displayName = displayName
+		item.name   = name
+		item.damage = damage
+		item.qty    = qty
+		table.insert(Inventory, item)
+	else
+		item.qty    = qty
+	end
+end
+
+function updateQtyList ()
+	for k,v in pairs(Configuration.SingledChests) do
+		updateQty(v[1], v[2])
+	end
+end
+function updateQty(name, damage)
+	local counter = 0
+
+	for k,v in ipairs(getAllChests(name, damage)) do
+		moveToChest(name, damage, k - 1)
+
+		work = {}
+		work.name = name
+		work.damage = damage
+		counter = counter + getChestQty(work)
+	end
+
+	setQty(name, damage, counter, displayName)
+	sleep(0)
+
+	os.queueEvent("sendInventory")
+end
+function getChestQty(work)
+	local counter = 0
+	chest = safeWrapChest("front")
+	if (chest == nil) then
+		return 0
+	end
+	local chestSize = chest.getInventorySize()
+	for i=1,chestSize do
+		local slot = chest.getStackInSlot(i)
+		if (slot ~= nil) then
+			if (slot.id == work.name) then
+				if (work.damage == nil or work.damage == slot.dmg) then
+					counter = counter + slot.qty
+				end
+			end
+		end
+	end
+
+	return counter
+end
+
+
+function oppositeSide(side)
+	if (side == "north") then
+		return "south"
+	end
+	if (side == "south") then
+		return "north"
+	end
+	if (side == "west") then
+		return "east"
+	end
+	if (side == "east") then
+		return "west"
+	end
+	return "east"
+end
+
+function getFirstFilledSlot(work)
+	local chestSize = chest.getInventorySize()
+	for i=1,chestSize do
+		local slot = chest.getStackInSlot(i)
+		if (slot ~= nil) then
+			if (slot.id == work.name) then
+				if (work.damage == nil or work.damage == slot.dmg) then
+					return i
+				end
+			end
+		end
+	end
+	return nil
+end
+
+function safeWrapChest(side)
+	peri = nil
+	while (peri == nil) do
+		sleep(0)
+		err, peri = pcall(function ()
+			sleep(0)
+			perip = peripheral.wrap("front")
+			perip.getInventorySize()
+			return perip
+		end)
+	end
+	return peri
+end
+function fetchFromChest(work)
+	allChests = getAllChests(work.name, work.damage)
+	local currentChest = 0
+	moveToChest(work.name, work.damage, currentChest)
+
+	chest = safeWrapChest("front")
+
+	-- Genug Items in der Chest?
+	--if (getChestQty(work) > work.qty) then
+		-- Ja.
+		local counter = 0
+		local fetchedItems = 0
+		local currentSlot = getFirstFilledSlot(work)
+
+		while fetchedItems < work.qty do
+			counter = counter +1
+			if (currentSlot == nil) or (chest.pushItem(oppositeSide(gpsMove.cDir), currentSlot, 1) == 0) then
+				currentSlot = getFirstFilledSlot(work)
+				if (currentSlot == nil) then
+					currentChest = currentChest + 1
+					if (currentChest < #allChests) then
+						moveToChest(work.name, work.damage, currentChest)
+						chest = safeWrapChest("front")
+						currentSlot = getFirstFilledSlot(work)
+					else
+						glassDebug.writeText("ERROR: fetchFromChest - keine Items der letzten Kiste vorhanden. "..work.name , 0xFF0000)
+						break
+					end
+				end
+			else
+				fetchedItems = fetchedItems + 1
+			end
+
+			-- Safety Abort
+			if (counter > 4096) then
+				glassDebug.writeText("ERROR: Schleifenfehler bei fetchFromChest "..work.name , 0xFF0000)
+				break
+			end
+		end
+
+		updateQty(work.name, work.damage)
+
+		moveToOutput()
+		sleep(0)
+		for i=1,16 do
+			turtle.select(i)
+			Configuration.OutputChest[4]()
+		end
+	--else
+		-- ERROR: Nicht genug Items in der Kiste.
+	--	glassDebug.writeText("ERROR: Nicht genug Items in der Kiste.", 0xFF0000)
+	--	glassDebug.writeText(work.name .. " - vorhanden:" .. tostring(getChestQty()).. " | gewuenscht: "..tostring(work.qty), 0xFF0000)
+	--end
+
+end
+
+function workLoop()
+	glassDebug.writeText ("Started.")
+	while true do
+		updateChestList()
+
+		updateQtyList()
+
+		FinishedWork = {}
+		-- Arbeit machen und in FinishedWork (table) eintragen
+
+		--glassDebug.writeText(tostring(#WorkQueue))
+		for k,v in pairs(WorkQueue) do
+			glassDebug.writeText ("Auftrag: "..v.name.." * "..tostring(v.qty))
+			fetchFromChest(v)
+
+			table.insert(FinishedWork, k)
+			updateQtyList()
+		end
+		--glassDebug.writeText ("Finished Work...")
+		-- Alle beendeten Auftraege aus der WorkQueue entfernen
+		for k,v in pairs(FinishedWork) do
+			table.remove(WorkQueue, v)
+		end
+
+		--local h = fs.open("inventory", "w")
+		--h.write(textutils.serialize(Inventory))
+		--h.close()
+		--glassDebug.writeText("X: "..tostring(chest[3] + Configuration.xOffset))
+		--glassDebug.writeText("Y: "..tostring(chest[4]))
+		--glassDebug.writeText("Z: "..tostring(chest[5]))
+
+
+		sleep(0)
+	end
+end
+
+function listenRequests()
+	while true do
+		senderId, message, protocol = rednet.receive("fetchItems")
+		glassDebug.writeText("Incoming Packet!")
+		local newWork = textutils.unserialize(message)
+		table.insert(WorkQueue, newWork)
+	end
+end
+
+function sendInventory()
+	while true do
+		os.pullEvent("sendInventory")
+		rednet.send(Configuration.WarehouseComputer, textutils.serialize(Inventory), "inventoryList")
+	end
+end
+
+parallel.waitForAll(workLoop, listenRequests, sendInventory)

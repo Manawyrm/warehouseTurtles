@@ -1,0 +1,26 @@
+displayNames = {
+    {"minecraft:dirt"                           , nil, "Dirt"},
+    {"minecraft:cobblestone"					, nil, "Cobblestone"},
+    {"minecraft:diamond"						, nil, "Diamond"},
+    {"minecraft:coal"							, nil, "Coal"},
+    {"minecraft:iron_ore"						, nil, "Iron Ore"},
+    {"IC2:blockOreCopper"						, nil, "Copper Ore"},
+    {"IC2:blockOreLead"							, nil, "Lead Ore"},
+    {"minecraft:flint"							, nil, "Flint"},
+    {"minecraft:gravel"							, nil, "Gravel"},
+    {"IC2:blockOreUran"							, nil, "Uran"},
+    {"IC2:blockOreTin"							, nil, "Tin"},
+    {"minecraft:redstone"						, nil, "Redstone"},
+    {"minecraft:gold_ore"						, nil, "Gold Ore"},
+    {"minecraft:dye" 							, nil, "Dye"},
+    {"minecraft:obsidian"						, nil, "Obsidian"},
+
+    {"ProjRed|Core:projectred.core.part"		, 37,  "Ruby"}, -- Ruby
+    {"ProjRed|Core:projectred.core.part"		, 38,  "Sapphire"}, -- Sapphire
+    {"ProjRed|Core:projectred.core.part"		, 39,  "Peridot"}, -- Peridot
+
+    {"Railcraft:cube"							, 7 ,  "Quarried Stone"}, -- Quarried Stone
+
+    {"minecraft:bread"                          , nil, "Bread"}
+
+}
